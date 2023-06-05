@@ -170,8 +170,10 @@ const styles = {
     flexDirection: "row",
     alignItems: "center",
     resizeMode: "cover",
-    marginBottom: 2,
+    marginBottom: 10,
     overflow: "hidden",
+    borderRadius: 30,
+    marginHorizontal: 5
   },
   cardContent: {
     flex: 1,

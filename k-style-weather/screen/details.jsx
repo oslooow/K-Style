@@ -4,7 +4,7 @@ import { View, Text, Image, StyleSheet } from "react-native";
 export default function DetailsScreen({ route }) {
   const { item } = route.params;
   const { dt_txt, main, weather } = item;
-
+console.log(weather)
   const getBackgroundImage = (weatherIcon) => {
     switch (weatherIcon) {
       case "01d":
@@ -81,12 +81,12 @@ export default function DetailsScreen({ route }) {
         </Text>
         <View style={styles.temperature}>
           <View style={styles.minTemp}>
-            <Text>Min Temp</Text>
-            <Text>{main.temp_min}&deg;C</Text>
+            <Text style={styles.tempTitle}>Min Temp</Text>
+            <Text style={styles.tempText}>{main.temp_min}&deg;C</Text>
           </View>
           <View style={styles.minTemp}>
-            <Text>Max Temp</Text>
-            <Text>{main.temp_min}&deg;C</Text>
+            <Text style={styles.tempTitle}>Max Temp</Text>
+            <Text style={styles.tempText}>{main.temp_min}&deg;C</Text>
           </View>
         </View>
       </View>
@@ -144,5 +144,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginTop: 30,
   },
+  minTemp: {
+    alignItems: "center",
+    marginHorizontal: 40,
+  },
+  tempTitle: {
+    fontWeight: "bold",
+    fontSize: 30,
+  },
+  tempText: {
+    fontSize: 30,
+  }
 });
