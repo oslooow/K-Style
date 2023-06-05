@@ -7,16 +7,54 @@ import {
   ImageBackground,
   Image,
 } from "react-native";
+import * as Location from "expo-location";
+import { Linking } from "expo";
+import Spinner from "react-native-loading-spinner-overlay";
 
 export default function Homescreen({ navigation }) {
   const [weatherData, setWeatherData] = useState([]);
+  const [location, setLocation] = useState(null);
   const [locationData, setLocationData] = useState([]);
   const [greeting, setGreeting] = useState("");
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true); // Added isLoading state
 
-  const fetchWeatherData = async () => {
+  const fetchLocation = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      setError("Permission to access location was denied.");
+      return;
+    }
+    try {
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+    } catch (error) {
+      setError("Error retrieving location.");
+    }
+  };
+
+  const handleOpenSettings = () => {
+    Linking.openSettings();
+  };
+
+  const fetchLocationData = async (latitude, longitude) => {
     try {
       const response = await fetch(
-        "https://api.openweathermap.org/data/2.5/forecast?lat=-6.302287708604747&lon=106.6541003450607&units=metric&appid=9b0583b2c8cdb9c5f664575d6e58a2b6"
+        `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&appid=9b0583b2c8cdb9c5f664575d6e58a2b6`
+      );
+      const data = await response.json();
+      setLocationData(data);
+    } catch (error) {
+      console.error("Error fetching location data: ", error);
+    } finally {
+      setIsLoading(false); // Set isLoading to false after fetching location data
+    }
+  };
+
+  const fetchWeatherData = async (latitude, longitude) => {
+    try {
+      const response = await fetch(
+        `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&units=metric&appid=9b0583b2c8cdb9c5f664575d6e58a2b6`
       );
       const data = await response.json();
       setWeatherData(data.list);
@@ -25,24 +63,19 @@ export default function Homescreen({ navigation }) {
     }
   };
 
-  const fetchLocationData = async () => {
-    try {
-      const response = await fetch(
-        "http://api.openweathermap.org/geo/1.0/reverse?lat=-6.302287708604747&lon=106.6541003450607&appid=9b0583b2c8cdb9c5f664575d6e58a2b6"
-      );
-      const data = await response.json();
-      setLocationData(data);
-    } catch (error) {
-      console.error("Error fetching location data: ", error);
-    }
-  };
-
   useEffect(() => {
-    fetchWeatherData();
-    fetchLocationData();
-    setGreeting(getGreeting());
-  }, []);
+    const fetchData = async () => {
+      await fetchLocation();
+      if (location) {
+        const { latitude, longitude } = location.coords;
+        fetchLocationData(latitude, longitude);
+        fetchWeatherData(latitude, longitude);
+        setGreeting(getGreeting());
+      }
+    };
 
+    fetchData();
+  }, [location]);
   const getBackgroundImage = (weatherIcon) => {
     switch (weatherIcon) {
       case "01d":
@@ -81,30 +114,32 @@ export default function Homescreen({ navigation }) {
       return "Good Morning!";
     } else if (currentHour >= 12 && currentHour < 18) {
       return "Good Afternoon!";
-    } else if (currentHour>= 18 && currentHour < 12){
+    } else if (currentHour >= 18 && currentHour < 12) {
       return "Good Evening!";
     } else {
-      return "Hello!"
+      return "Hello!";
     }
   };
 
   const renderWeatherCard = ({ item }) => {
     const { dt_txt, main, weather } = item;
 
-    const formattedDate = new Date(dt_txt).toLocaleDateString("en-US", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }) + " | " + new Date(dt_txt).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    
-    
+    const formattedDate =
+      new Date(dt_txt).toLocaleDateString("en-US", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }) +
+      " | " +
+      new Date(dt_txt).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+
     const navigateToDetails = () => {
-      navigation.navigate("DetailsScreen", { item });
+      navigation.navigate("DetailsScreen", { item, locationData });
     };
 
     const capitalizeFirstLetter = (string) => {
@@ -114,7 +149,6 @@ export default function Homescreen({ navigation }) {
       });
       return capitalizedWords.join(" ");
     };
-    
 
     const backgroundImage = getBackgroundImage(weather[0].icon);
 
@@ -141,9 +175,33 @@ export default function Homescreen({ navigation }) {
     );
   };
 
+  if (error) {
+    return (
+      <View>
+        <Text>Error: {error}</Text>
+        <Button title="Open Settings" onPress={handleOpenSettings} />
+      </View>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <View style={styles.gettingLocation}>
+        <Spinner
+          visible={true}
+          textContent={"Getting your location..."}
+          textStyle={styles.spinnerText}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-       <Text style={styles.headerText}>{greeting} Check Today's Weather!</Text>
+      <Text style={styles.headerText}>
+        {greeting} {"\n"}Here is weather today in {locationData[0].name},{" "}
+        {locationData[0].state}!
+      </Text>
       <FlatList
         data={weatherData}
         renderItem={renderWeatherCard}
@@ -154,6 +212,15 @@ export default function Homescreen({ navigation }) {
 }
 
 const styles = {
+  gettingLocation: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  spinnerText: {
+    color: "#ffffff",
+    fontSize: 16,
+  },
   container: {
     flex: 1,
     justifyContent: "flex-start",
@@ -173,7 +240,7 @@ const styles = {
     marginBottom: 10,
     overflow: "hidden",
     borderRadius: 30,
-    marginHorizontal: 5
+    marginHorizontal: 5,
   },
   cardContent: {
     flex: 1,

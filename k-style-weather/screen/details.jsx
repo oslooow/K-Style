@@ -2,9 +2,11 @@ import React from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
 
 export default function DetailsScreen({ route }) {
-  const { item } = route.params;
+  const { item, locationData } = route.params;
   const { dt_txt, main, weather } = item;
-console.log(weather)
+  const { name, state, country } = locationData[0];
+  console.log(name, state, country);
+  console.log(weather);
   const getBackgroundImage = (weatherIcon) => {
     switch (weatherIcon) {
       case "01d":
@@ -63,6 +65,9 @@ console.log(weather)
         style={styles.backgroundImage}
       />
       <View style={styles.content}>
+        <Text style={styles.locText}>
+          {name}, {state}
+        </Text>
         <Text style={styles.dateText}>{formattedDate}</Text>
         <Text style={styles.hourText}>{hour}</Text>
         <View style={styles.temperatureImg}>
@@ -114,10 +119,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(128, 128, 125, 0.7)",
     alignItems: "center",
   },
+  locText: {
+    fontSize: 30,
+    marginTop: 30,
+  },
   dateText: {
     fontWeight: "bold",
     fontSize: 40,
-    marginTop: 30,
   },
   hourText: {
     fontSize: 40,
@@ -156,5 +164,5 @@ const styles = StyleSheet.create({
   },
   tempText: {
     fontSize: 30,
-  }
+  },
 });
